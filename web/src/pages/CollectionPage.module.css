@@ -29,8 +29,18 @@
 }
 
 .title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   font-size: 1.5rem;
   color: var(--color-primary-dark);
+}
+
+.count {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--color-text-soft);
 }
 
 .empty {
@@ -42,7 +52,9 @@
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-auto-rows: min-content;
   align-content: start;
+  align-items: start;
   gap: 16px;
   flex: 1;
   min-height: 0;
