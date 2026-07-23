@@ -1,0 +1,8 @@
+{
+  "name": "cat-capture",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel -r run dev",
+    "build": "pnpm --filter web run build"
+  }
+}

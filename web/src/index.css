@@ -1,0 +1,57 @@
+:root {
+  --color-bg: #f7e0e6;
+  --color-bg-soft: #f0c3d2;
+  --color-surface: #fff3f6;
+  --color-primary: #e0789a;
+  --color-primary-dark: #c85c80;
+  --color-accent: #b98ac9;
+  --color-text: #5a3a4a;
+  --color-text-soft: #9c7a8a;
+  --color-shadow: rgba(90, 58, 74, 0.18);
+  --color-error: #c0526a;
+
+  --font-heading: "Quicksand", sans-serif;
+  --font-body: "Nunito", sans-serif;
+
+  --radius-lg: 28px;
+  --radius-md: 18px;
+  --radius-sm: 12px;
+
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  background: radial-gradient(circle at 20% 0%, var(--color-bg-soft), var(--color-bg) 60%);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  margin: 0;
+}
+
+button {
+  font-family: inherit;
+}

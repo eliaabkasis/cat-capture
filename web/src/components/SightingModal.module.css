@@ -1,0 +1,102 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(74, 59, 50, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 100;
+}
+
+.card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 20px 40px var(--color-shadow);
+  text-align: center;
+}
+
+.image {
+  width: 100%;
+  display: block;
+  border: 3px solid var(--color-primary);
+  border-radius: var(--radius-md);
+}
+
+.caption {
+  margin-top: 12px;
+  font-size: 0.9rem;
+  color: var(--color-text-soft);
+}
+
+.switchButton {
+  margin-top: 16px;
+  margin-right: 10px;
+  padding: 10px 24px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--color-primary);
+  background: transparent;
+  color: var(--color-primary-dark);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.closeButton {
+  margin-top: 16px;
+  padding: 10px 24px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--color-primary);
+  color: #fffaf1;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.deleteButton {
+  display: block;
+  margin: 14px auto 0;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  color: var(--color-error);
+  font-size: 0.85rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.confirmRow {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.confirmText {
+  font-size: 0.85rem;
+  color: var(--color-text-soft);
+}
+
+.confirmDeleteButton {
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--color-error);
+  color: #fffaf1;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cancelButton {
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--color-text-soft);
+  background: transparent;
+  color: var(--color-text-soft);
+  font-weight: 600;
+  cursor: pointer;
+}

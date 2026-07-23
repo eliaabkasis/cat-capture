@@ -1,0 +1,15 @@
+{
+  "name": "Cat Capture",
+  "short_name": "Cat Capture",
+  "description": "Snap the cats you meet in the wild and build a cozy lofi collection.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7e0e6",
+  "theme_color": "#e0789a",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

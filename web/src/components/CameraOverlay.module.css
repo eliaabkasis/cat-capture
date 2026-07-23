@@ -1,0 +1,131 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: #2b1620;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.videoWrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.closeButton {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(90, 44, 66, 0.55);
+  color: #fffaf1;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.captureBar {
+  position: absolute;
+  bottom: 36px;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.hiddenFileInput {
+  display: none;
+}
+
+.uploadButton {
+  padding: 10px 22px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: rgba(90, 44, 66, 0.55);
+  color: #fffaf1;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.captureButton {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border: 4px solid #fffaf1;
+  background: var(--color-primary);
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.captureButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.statusPanel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 32px;
+  text-align: center;
+  background: rgba(43, 22, 32, 0.9);
+  color: #fffaf1;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 5px solid rgba(255, 250, 241, 0.25);
+  border-top-color: var(--color-primary);
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.statusText {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+}
+
+.errorText {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  color: #f5b9cd;
+}
+
+.retryButton {
+  margin-top: 4px;
+  padding: 12px 28px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--color-primary);
+  color: #fffaf1;
+  font-weight: 600;
+  cursor: pointer;
+}
