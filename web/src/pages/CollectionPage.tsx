@@ -102,11 +102,21 @@ export function CollectionPage({ onBack, refreshKey }: CollectionPageProps) {
         </button>
         <h1 className={styles.title}>
           My Cats
-          {totalCount > 0 && <span className={styles.count}>{totalCount} Captured</span>}
+          {initialLoading ? (
+            <span className={`${styles.count} ${styles.countSkeleton}`}>&nbsp;</span>
+          ) : (
+            totalCount > 0 && <span className={styles.count}>{totalCount} Captured</span>
+          )}
         </h1>
       </div>
 
-      {!initialLoading && sightings.length === 0 ? (
+      {initialLoading ? (
+        <div className={styles.grid}>
+          {Array.from({ length: 9 }, (_, i) => (
+            <div key={i} className={styles.tile} />
+          ))}
+        </div>
+      ) : sightings.length === 0 ? (
         <p className={styles.empty}>No cats captured yet — go find one!</p>
       ) : (
         <div className={styles.grid} ref={gridRef}>

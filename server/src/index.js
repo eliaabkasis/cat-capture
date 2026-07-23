@@ -89,6 +89,10 @@ function toSightingResponse(row) {
   };
 }
 
+app.get("/healthz", (_req, res) => {
+  res.status(200).json({ ok: true });
+});
+
 app.post("/api/auth/google", async (req, res) => {
   const { credential } = req.body;
   if (!credential) {
