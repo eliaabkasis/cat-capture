@@ -30,7 +30,12 @@ export function CollectionPage({ onBack, refreshKey }: CollectionPageProps) {
         <button className={styles.backButton} onClick={onBack} aria-label="Back to home">
           ←
         </button>
-        <h1 className={styles.title}>My Cats</h1>
+        <h1 className={styles.title}>
+          My Cats
+          {sightings.length > 0 && (
+            <span className={styles.count}>{sightings.length} Captured</span>
+          )}
+        </h1>
       </div>
 
       {sightings.length === 0 ? (
