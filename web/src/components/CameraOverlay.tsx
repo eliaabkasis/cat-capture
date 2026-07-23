@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Sighting } from "../types";
 import { NoCatFoundError, submitSighting } from "../api/sightings";
+import { resizeForUpload } from "../image";
 import styles from "./CameraOverlay.module.css";
 
 interface CameraOverlayProps {
@@ -64,7 +65,8 @@ export function CameraOverlay({ onClose, onCaptured }: CameraOverlayProps) {
   async function processBlob(blob: Blob) {
     setPhase("checking");
     try {
-      const sighting = await submitSighting(blob);
+      const resized = await resizeForUpload(blob);
+      const sighting = await submitSighting(resized);
       onCaptured(sighting);
     } catch (err) {
       setPhase(err instanceof NoCatFoundError ? "no-cat" : "error");
