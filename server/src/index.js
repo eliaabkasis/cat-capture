@@ -68,6 +68,8 @@ app.use(cookieParser());
 app.use(
   "/uploads",
   express.static(uploadsDir, {
+    immutable: true,
+    maxAge: "1y",
     setHeaders: (res) => {
       res.setHeader("X-Content-Type-Options", "nosniff");
     },

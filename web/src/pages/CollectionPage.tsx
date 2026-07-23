@@ -49,7 +49,13 @@ export function CollectionPage({ onBack, refreshKey }: CollectionPageProps) {
               onClick={() => setSelected(sighting)}
               aria-label="View original photo"
             >
-              <img className={styles.tileImage} src={sighting.lofiUrl} alt="Lofi cat portrait" />
+              <img
+                className={styles.tileImage}
+                src={sighting.lofiUrl}
+                alt="Lofi cat portrait"
+                loading="lazy"
+                decoding="async"
+              />
             </button>
           ))}
         </div>
