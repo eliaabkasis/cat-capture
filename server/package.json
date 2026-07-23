@@ -9,7 +9,8 @@
   },
   "scripts": {
     "dev": "node --watch src/index.js",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "backfill-thumbnails": "node scripts/backfill-thumbnails.js"
   },
   "keywords": [],
   "author": "",
@@ -22,6 +23,7 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.6.0",
     "google-auth-library": "^10.9.0",
-    "multer": "^2.2.0"
+    "multer": "^2.2.0",
+    "sharp": "^0.33.5"
   }
 }

@@ -7,8 +7,25 @@ export class NoCatFoundError extends Error {
   }
 }
 
+export interface SightingsPage {
+  items: Sighting[];
+  nextCursor: string | null;
+  totalCount: number;
+}
+
 export async function fetchSightings(): Promise<Sighting[]> {
   const res = await fetch("/api/sightings", { credentials: "include" });
+  if (!res.ok) {
+    throw new Error(`Failed to load sightings (${res.status})`);
+  }
+  return res.json();
+}
+
+export async function fetchSightingsPage(cursor?: string | null): Promise<SightingsPage> {
+  const params = new URLSearchParams({ limit: "30" });
+  if (cursor) params.set("cursor", cursor);
+
+  const res = await fetch(`/api/sightings?${params}`, { credentials: "include" });
   if (!res.ok) {
     throw new Error(`Failed to load sightings (${res.status})`);
   }

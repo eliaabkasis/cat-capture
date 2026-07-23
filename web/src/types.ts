@@ -3,6 +3,7 @@ export interface Sighting {
   createdAt: string;
   originalUrl: string;
   lofiUrl: string;
+  thumbUrl: string;
 }
 
 export interface User {
