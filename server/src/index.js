@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import multer from "multer";
+import sharp from "sharp";
 import { rateLimit, ipKeyGenerator } from "express-rate-limit";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -76,12 +77,15 @@ app.use(
   }),
 );
 
+const THUMBNAIL_SIZE = 320;
+
 function toSightingResponse(row) {
   return {
     id: row.id,
     createdAt: row.created_at,
     originalUrl: `/uploads/${row.original_filename}`,
     lofiUrl: `/uploads/${row.lofi_filename}`,
+    thumbUrl: `/uploads/${row.thumb_filename || row.lofi_filename}`,
   };
 }
 
@@ -151,6 +155,12 @@ app.post("/api/sightings", sightingCreateLimiter, upload.single("photo"), async 
     const lofiExt = EXT_BY_MIME[result.imageMimeType] || "png";
     const originalFilename = `${id}-original.${originalExt}`;
     const lofiFilename = `${id}-lofi.${lofiExt}`;
+    const thumbFilename = `${id}-thumb.webp`;
+
+    const thumbBuffer = await sharp(result.imageBuffer)
+      .resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, { fit: "cover" })
+      .webp({ quality: 78 })
+      .toBuffer();
 
     await writeFile(
       path.join(uploadsDir, originalFilename),
@@ -160,12 +170,16 @@ app.post("/api/sightings", sightingCreateLimiter, upload.single("photo"), async 
       path.join(uploadsDir, lofiFilename),
       result.imageBuffer,
     );
+    await writeFile(
+      path.join(uploadsDir, thumbFilename),
+      thumbBuffer,
+    );
 
     const createdAt = new Date().toISOString();
     db.prepare(
-      `INSERT INTO sightings (id, created_at, original_filename, lofi_filename, user_id)
-       VALUES (?, ?, ?, ?, ?)`,
-    ).run(id, createdAt, originalFilename, lofiFilename, req.user.id);
+      `INSERT INTO sightings (id, created_at, original_filename, lofi_filename, thumb_filename, user_id)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run(id, createdAt, originalFilename, lofiFilename, thumbFilename, req.user.id);
 
     res.status(201).json(
       toSightingResponse({
@@ -173,6 +187,7 @@ app.post("/api/sightings", sightingCreateLimiter, upload.single("photo"), async 
         created_at: createdAt,
         original_filename: originalFilename,
         lofi_filename: lofiFilename,
+        thumb_filename: thumbFilename,
       }),
     );
   } catch (err) {
@@ -193,9 +208,9 @@ app.delete("/api/sightings/:id", async (req, res) => {
   db.prepare("DELETE FROM sightings WHERE id = ?").run(req.params.id);
 
   await Promise.all(
-    [row.original_filename, row.lofi_filename].map((filename) =>
-      unlink(path.join(uploadsDir, filename)).catch(() => {}),
-    ),
+    [row.original_filename, row.lofi_filename, row.thumb_filename]
+      .filter(Boolean)
+      .map((filename) => unlink(path.join(uploadsDir, filename)).catch(() => {})),
   );
 
   res.status(204).end();

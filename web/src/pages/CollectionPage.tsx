@@ -51,7 +51,7 @@ export function CollectionPage({ onBack, refreshKey }: CollectionPageProps) {
             >
               <img
                 className={styles.tileImage}
-                src={sighting.lofiUrl}
+                src={sighting.thumbUrl}
                 alt="Lofi cat portrait"
                 loading="lazy"
                 decoding="async"

@@ -40,3 +40,8 @@ const hasUserId = sightingsColumns.some((col) => col.name === "user_id");
 if (!hasUserId) {
   db.exec("ALTER TABLE sightings ADD COLUMN user_id TEXT");
 }
+
+const hasThumbFilename = sightingsColumns.some((col) => col.name === "thumb_filename");
+if (!hasThumbFilename) {
+  db.exec("ALTER TABLE sightings ADD COLUMN thumb_filename TEXT");
+}
