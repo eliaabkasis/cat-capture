@@ -57,6 +57,7 @@ const sightingCreateLimiter = rateLimit({
 });
 
 const app = express();
+app.set("trust proxy", 1);
 app.use(
   cors({
     origin: (process.env.CORS_ORIGIN || "http://localhost:5173").split(","),
