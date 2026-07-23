@@ -1,24 +1,29 @@
-app = "cat-capture"
-primary_region = "iad"
+# fly.toml app configuration file generated for cat-capture on 2026-07-23T17:19:59Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'cat-capture'
+primary_region = 'iad'
 
 [build]
 
 [env]
-  PORT = "3001"
-  NODE_ENV = "production"
-  DATA_DIR = "/data"
+  DATA_DIR = '/data'
+  NODE_ENV = 'production'
+  PORT = '3001'
 
 [[mounts]]
-  source = "cat_capture_data"
-  destination = "/data"
+  source = 'cat_capture_data'
+  destination = '/data'
 
 [http_service]
   internal_port = 3001
   force_https = true
-  auto_stop_machines = true
+  auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 0
 
 [[vm]]
-  size = "shared-cpu-1x"
-  memory = "512mb"
+  size = 'shared-cpu-1x'
+  memory = '512mb'
