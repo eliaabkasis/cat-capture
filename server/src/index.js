@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import multer from "multer";
+import { rateLimit, ipKeyGenerator } from "express-rate-limit";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
@@ -27,9 +28,32 @@ await mkdir(uploadsDir, { recursive: true });
 
 const PORT = process.env.PORT || 3001;
 const IS_PROD = process.env.NODE_ENV === "production";
+
+const EXT_BY_MIME = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 15 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (Object.prototype.hasOwnProperty.call(EXT_BY_MIME, file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("unsupported_file_type"));
+    }
+  },
+});
+
+const sightingCreateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user?.id ?? ipKeyGenerator(req.ip),
+  message: { error: "rate_limited" },
 });
 
 const app = express();
@@ -41,13 +65,14 @@ app.use(
 );
 app.use(express.json());
 app.use(cookieParser());
-app.use("/uploads", express.static(uploadsDir));
-
-const EXT_BY_MIME = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-};
+app.use(
+  "/uploads",
+  express.static(uploadsDir, {
+    setHeaders: (res) => {
+      res.setHeader("X-Content-Type-Options", "nosniff");
+    },
+  }),
+);
 
 function toSightingResponse(row) {
   return {
@@ -103,7 +128,7 @@ app.get("/api/sightings", (req, res) => {
   res.json(rows.map(toSightingResponse));
 });
 
-app.post("/api/sightings", upload.single("photo"), async (req, res) => {
+app.post("/api/sightings", sightingCreateLimiter, upload.single("photo"), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: "missing_photo" });
   }
@@ -172,6 +197,13 @@ app.delete("/api/sightings/:id", async (req, res) => {
   );
 
   res.status(204).end();
+});
+
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError || err.message === "unsupported_file_type") {
+    return res.status(400).json({ error: "invalid_photo" });
+  }
+  next(err);
 });
 
 if (IS_PROD) {
