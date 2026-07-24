@@ -17,6 +17,8 @@ export function CameraOverlay({ onClose, onCaptured }: CameraOverlayProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [phase, setPhase] = useState<Phase>("live");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [cameraAttempt, setCameraAttempt] = useState(0);
 
   useEffect(() => {
     return () => {
