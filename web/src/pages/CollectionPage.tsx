@@ -1,15 +1,18 @@
-import { useEffect, useRef, useState } from "react";
-import type { Sighting } from "../types";
-import { fetchSightingsPage } from "../api/sightings";
+import { useEffect, useState } from "react";
+import type { FriendUser, Sighting } from "../types";
+import { fetchSightings } from "../api/sightings";
+import { fetchFriendSightings } from "../api/friends";
+import { isToday } from "../stats";
 import { SightingModal } from "../components/SightingModal";
 import styles from "./CollectionPage.module.css";
 
 interface CollectionPageProps {
   onBack: () => void;
   refreshKey: number;
+  friend?: FriendUser;
 }
 
-export function CollectionPage({ onBack, refreshKey }: CollectionPageProps) {
+export function CollectionPage({ onBack, refreshKey, friend }: CollectionPageProps) {
   const [sightings, setSightings] = useState<Sighting[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -18,35 +21,17 @@ export function CollectionPage({ onBack, refreshKey }: CollectionPageProps) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadedIds, setLoadedIds] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<Sighting | null>(null);
-  const gridRef = useRef<HTMLDivElement>(null);
-  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [loading, setLoading] = useState(true);
+  const readOnly = Boolean(friend);
 
   useEffect(() => {
-    let cancelled = false;
-    setInitialLoading(true);
-
-    fetchSightingsPage()
-      .then((page) => {
-        if (cancelled) return;
-        setSightings(page.items);
-        setTotalCount(page.totalCount);
-        setCursor(page.nextCursor);
-        setHasMore(page.nextCursor !== null);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setSightings([]);
-        setTotalCount(0);
-        setHasMore(false);
-      })
-      .finally(() => {
-        if (!cancelled) setInitialLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [refreshKey]);
+    setLoading(true);
+    const load = friend ? fetchFriendSightings(friend.id) : fetchSightings();
+    load
+      .then(setSightings)
+      .catch(() => setSightings([]))
+      .finally(() => setLoading(false));
+  }, [refreshKey, friend]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -101,36 +86,45 @@ export function CollectionPage({ onBack, refreshKey }: CollectionPageProps) {
           ←
         </button>
         <h1 className={styles.title}>
-          My Cats
-          {totalCount > 0 && <span className={styles.count}>{totalCount} Captured</span>}
+          {friend ? `${friend.name ?? friend.email}'s Cats` : "My Cats"}
+          {sightings.length > 0 && (
+            <span className={styles.count}>{sightings.length} Captured</span>
+          )}
         </h1>
       </div>
 
-      {!initialLoading && sightings.length === 0 ? (
-        <p className={styles.empty}>No cats captured yet — go find one!</p>
-      ) : (
-        <div className={styles.grid} ref={gridRef}>
-          {sightings.map((sighting) => (
-            <button
-              key={sighting.id}
-              className={`${styles.tile} ${loadedIds.has(sighting.id) ? styles.tileLoaded : ""}`}
-              onClick={() => setSelected(sighting)}
-              aria-label="View original photo"
-            >
-              <img
-                className={`${styles.tileImage} ${loadedIds.has(sighting.id) ? styles.tileImageLoaded : ""}`}
-                src={sighting.thumbUrl}
-                alt="Lofi cat portrait"
-                loading="lazy"
-                decoding="async"
-                width={320}
-                height={320}
-                onLoad={() => handleImageLoad(sighting.id)}
-              />
-            </button>
+      {loading ? (
+        <div className={styles.grid}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div className={styles.skeletonTile} key={i} />
           ))}
-
-          {hasMore && <div ref={sentinelRef} className={styles.sentinel} />}
+        </div>
+      ) : sightings.length === 0 ? (
+        <p className={styles.empty}>
+          {friend ? "No cats captured yet." : "No cats captured yet — go find one!"}
+        </p>
+      ) : (
+        <div className={styles.grid}>
+          {sightings.map((sighting) => {
+            const caughtToday = isToday(sighting.createdAt);
+            return (
+              <button
+                key={sighting.id}
+                className={caughtToday ? `${styles.tile} ${styles.tileToday}` : styles.tile}
+                onClick={() => setSelected(sighting)}
+                aria-label="View original photo"
+              >
+                {caughtToday && (
+                  <>
+                    <span className={styles.sparkle} data-pos="tl">✦</span>
+                    <span className={styles.sparkle} data-pos="br">✦</span>
+                    <span className={styles.todayBadge}>Today</span>
+                  </>
+                )}
+                <img className={styles.tileImage} src={sighting.lofiUrl} alt="Lofi cat portrait" />
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -139,6 +133,7 @@ export function CollectionPage({ onBack, refreshKey }: CollectionPageProps) {
           sighting={selected}
           onClose={() => setSelected(null)}
           onDeleted={handleDeleted}
+          readOnly={readOnly}
         />
       )}
     </div>

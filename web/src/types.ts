@@ -12,3 +12,11 @@ export interface User {
   name: string | null;
   pictureUrl: string | null;
 }
+
+export type FriendUser = User;
+
+export interface FriendRequest {
+  id: string;
+  createdAt: string;
+  user: FriendUser;
+}

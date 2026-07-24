@@ -8,11 +8,12 @@ interface SightingModalProps {
   sighting: Sighting;
   onClose: () => void;
   onDeleted: (id: string) => void;
+  readOnly?: boolean;
 }
 
 type Shown = "lofi" | "original";
 
-export function SightingModal({ sighting, onClose, onDeleted }: SightingModalProps) {
+export function SightingModal({ sighting, onClose, onDeleted, readOnly = false }: SightingModalProps) {
   const [shown, setShown] = useState<Shown>("lofi");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -49,29 +50,30 @@ export function SightingModal({ sighting, onClose, onDeleted }: SightingModalPro
           Close
         </button>
 
-        {!confirmingDelete ? (
-          <button className={styles.deleteButton} onClick={() => setConfirmingDelete(true)}>
-            Remove this cat
-          </button>
-        ) : (
-          <div className={styles.confirmRow}>
-            <span className={styles.confirmText}>Remove for good?</span>
-            <button
-              className={styles.confirmDeleteButton}
-              onClick={handleConfirmDelete}
-              disabled={deleting}
-            >
-              {deleting ? "Removing…" : "Yes, remove"}
+        {!readOnly &&
+          (!confirmingDelete ? (
+            <button className={styles.deleteButton} onClick={() => setConfirmingDelete(true)}>
+              Remove this cat
             </button>
-            <button
-              className={styles.cancelButton}
-              onClick={() => setConfirmingDelete(false)}
-              disabled={deleting}
-            >
-              Cancel
-            </button>
-          </div>
-        )}
+          ) : (
+            <div className={styles.confirmRow}>
+              <span className={styles.confirmText}>Remove for good?</span>
+              <button
+                className={styles.confirmDeleteButton}
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+              >
+                {deleting ? "Removing…" : "Yes, remove"}
+              </button>
+              <button
+                className={styles.cancelButton}
+                onClick={() => setConfirmingDelete(false)}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+            </div>
+          ))}
       </div>
     </div>
   );

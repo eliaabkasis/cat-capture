@@ -6,6 +6,10 @@ function dayKey(date: Date): string {
   return new Intl.DateTimeFormat("en-CA").format(date);
 }
 
+export function isToday(isoString: string): boolean {
+  return dayKey(new Date(isoString)) === dayKey(new Date());
+}
+
 export function computeDailyStreak(sightings: Sighting[]): number {
   const dayKeys = new Set(sightings.map((s) => dayKey(new Date(s.createdAt))));
   if (dayKeys.size === 0) return 0;
