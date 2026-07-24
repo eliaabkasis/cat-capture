@@ -7,6 +7,7 @@ import styles from "./HomePage.module.css";
 interface HomePageProps {
   onOpenCamera: () => void;
   onOpenCollection: () => void;
+  onOpenFriends: () => void;
   refreshKey: number;
   user: User;
   onSignOut: () => void;
@@ -15,6 +16,7 @@ interface HomePageProps {
 export function HomePage({
   onOpenCamera,
   onOpenCollection,
+  onOpenFriends,
   refreshKey,
   user,
   onSignOut,
@@ -72,9 +74,15 @@ export function HomePage({
         </svg>
       </button>
 
-      <button className={styles.navButton} onClick={onOpenCollection}>
-        My Cats
-      </button>
+      <div className={styles.navButtons}>
+        <button className={styles.navButton} onClick={onOpenCollection}>
+          My Cats
+        </button>
+
+        <button className={styles.navButton} onClick={onOpenFriends}>
+          Friends
+        </button>
+      </div>
     </div>
   );
 }

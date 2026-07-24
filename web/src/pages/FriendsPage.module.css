@@ -1,0 +1,166 @@
+.page {
+  height: 100vh;
+  height: 100dvh;
+  width: 100%;
+  max-width: 640px;
+  padding: 32px 20px 8px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-shrink: 0;
+}
+
+.backButton {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-surface);
+  box-shadow: 0 6px 14px var(--color-shadow);
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.title {
+  font-size: 1.5rem;
+  color: var(--color-primary-dark);
+}
+
+.addForm {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.emailInput {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--color-text-soft);
+  font-size: 0.95rem;
+}
+
+.sendButton {
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--color-accent);
+  color: #fffaf1;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.errorText {
+  color: var(--color-error);
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+
+.successText {
+  color: var(--color-primary-dark);
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+
+.section {
+  margin-top: 20px;
+}
+
+.sectionTitle {
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  color: var(--color-primary-dark);
+  margin-bottom: 10px;
+}
+
+.empty {
+  color: var(--color-text-soft);
+  font-size: 0.9rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: 0 6px 14px var(--color-shadow);
+  margin-bottom: 8px;
+}
+
+.friendButton {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  flex: 1;
+  min-width: 0;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid var(--color-primary);
+  flex-shrink: 0;
+}
+
+.rowName {
+  font-size: 0.95rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.acceptButton {
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--color-accent);
+  color: #fffaf1;
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.declineButton {
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--color-text-soft);
+  background: transparent;
+  color: var(--color-text-soft);
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.pendingLabel {
+  font-size: 0.8rem;
+  color: var(--color-text-soft);
+  border: none;
+  background: none;
+  cursor: pointer;
+}

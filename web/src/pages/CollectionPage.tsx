@@ -1,23 +1,25 @@
 import { useEffect, useState } from "react";
-import type { Sighting } from "../types";
+import type { FriendUser, Sighting } from "../types";
 import { fetchSightings } from "../api/sightings";
+import { fetchFriendSightings } from "../api/friends";
 import { SightingModal } from "../components/SightingModal";
 import styles from "./CollectionPage.module.css";
 
 interface CollectionPageProps {
   onBack: () => void;
   refreshKey: number;
+  friend?: FriendUser;
 }
 
-export function CollectionPage({ onBack, refreshKey }: CollectionPageProps) {
+export function CollectionPage({ onBack, refreshKey, friend }: CollectionPageProps) {
   const [sightings, setSightings] = useState<Sighting[]>([]);
   const [selected, setSelected] = useState<Sighting | null>(null);
+  const readOnly = Boolean(friend);
 
   useEffect(() => {
-    fetchSightings()
-      .then(setSightings)
-      .catch(() => setSightings([]));
-  }, [refreshKey]);
+    const load = friend ? fetchFriendSightings(friend.id) : fetchSightings();
+    load.then(setSightings).catch(() => setSightings([]));
+  }, [refreshKey, friend]);
 
   function handleDeleted(id: string) {
     setSightings((prev) => prev.filter((sighting) => sighting.id !== id));
@@ -31,7 +33,7 @@ export function CollectionPage({ onBack, refreshKey }: CollectionPageProps) {
           ←
         </button>
         <h1 className={styles.title}>
-          My Cats
+          {friend ? `${friend.name ?? friend.email}'s Cats` : "My Cats"}
           {sightings.length > 0 && (
             <span className={styles.count}>{sightings.length} Captured</span>
           )}
@@ -39,7 +41,9 @@ export function CollectionPage({ onBack, refreshKey }: CollectionPageProps) {
       </div>
 
       {sightings.length === 0 ? (
-        <p className={styles.empty}>No cats captured yet — go find one!</p>
+        <p className={styles.empty}>
+          {friend ? "No cats captured yet." : "No cats captured yet — go find one!"}
+        </p>
       ) : (
         <div className={styles.grid}>
           {sightings.map((sighting) => (
@@ -60,6 +64,7 @@ export function CollectionPage({ onBack, refreshKey }: CollectionPageProps) {
           sighting={selected}
           onClose={() => setSelected(null)}
           onDeleted={handleDeleted}
+          readOnly={readOnly}
         />
       )}
     </div>

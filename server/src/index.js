@@ -200,6 +200,206 @@ app.delete("/api/sightings/:id", async (req, res) => {
   res.status(204).end();
 });
 
+function toFriendUserResponse(row) {
+  return {
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    pictureUrl: row.picture_url,
+  };
+}
+
+function toFriendRequestResponse(row) {
+  return {
+    id: String(row.request_id),
+    createdAt: row.request_created_at,
+    user: {
+      id: row.user_id,
+      email: row.email,
+      name: row.name,
+      pictureUrl: row.picture_url,
+    },
+  };
+}
+
+app.use("/api/friends", requireAuth);
+
+app.post("/api/friends/requests", (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ error: "missing_email" });
+  }
+
+  const target = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
+  if (!target) {
+    return res.status(404).json({ error: "user_not_found" });
+  }
+  if (target.id === req.user.id) {
+    return res.status(400).json({ error: "cannot_friend_self" });
+  }
+
+  const existing = db
+    .prepare(
+      `SELECT * FROM friend_requests
+       WHERE (requester_id = ? AND recipient_id = ?) OR (requester_id = ? AND recipient_id = ?)`,
+    )
+    .get(req.user.id, target.id, target.id, req.user.id);
+
+  if (existing) {
+    if (existing.status === "accepted") {
+      return res.status(409).json({ error: "already_friends" });
+    }
+    if (existing.requester_id === req.user.id) {
+      return res.status(409).json({ error: "already_requested" });
+    }
+
+    db.prepare("UPDATE friend_requests SET status = 'accepted', responded_at = ? WHERE id = ?").run(
+      new Date().toISOString(),
+      existing.id,
+    );
+    return res.json(toFriendUserResponse(target));
+  }
+
+  db.prepare(
+    `INSERT INTO friend_requests (requester_id, recipient_id, status, created_at)
+     VALUES (?, ?, 'pending', ?)`,
+  ).run(req.user.id, target.id, new Date().toISOString());
+
+  res.status(201).json({ status: "pending" });
+});
+
+app.get("/api/friends/requests/incoming", (req, res) => {
+  const rows = db
+    .prepare(
+      `SELECT friend_requests.id AS request_id, friend_requests.created_at AS request_created_at,
+              users.id AS user_id, users.email, users.name, users.picture_url
+       FROM friend_requests
+       JOIN users ON users.id = friend_requests.requester_id
+       WHERE friend_requests.recipient_id = ? AND friend_requests.status = 'pending'
+       ORDER BY friend_requests.created_at DESC`,
+    )
+    .all(req.user.id);
+  res.json(rows.map(toFriendRequestResponse));
+});
+
+app.get("/api/friends/requests/outgoing", (req, res) => {
+  const rows = db
+    .prepare(
+      `SELECT friend_requests.id AS request_id, friend_requests.created_at AS request_created_at,
+              users.id AS user_id, users.email, users.name, users.picture_url
+       FROM friend_requests
+       JOIN users ON users.id = friend_requests.recipient_id
+       WHERE friend_requests.requester_id = ? AND friend_requests.status = 'pending'
+       ORDER BY friend_requests.created_at DESC`,
+    )
+    .all(req.user.id);
+  res.json(rows.map(toFriendRequestResponse));
+});
+
+app.post("/api/friends/requests/:id/accept", (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    return res.status(404).json({ error: "not_found" });
+  }
+
+  const row = db
+    .prepare("SELECT * FROM friend_requests WHERE id = ? AND recipient_id = ? AND status = 'pending'")
+    .get(id, req.user.id);
+  if (!row) {
+    return res.status(404).json({ error: "not_found" });
+  }
+
+  db.prepare("UPDATE friend_requests SET status = 'accepted', responded_at = ? WHERE id = ?").run(
+    new Date().toISOString(),
+    row.id,
+  );
+  res.status(204).end();
+});
+
+app.post("/api/friends/requests/:id/decline", (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    return res.status(404).json({ error: "not_found" });
+  }
+
+  const row = db
+    .prepare("SELECT * FROM friend_requests WHERE id = ? AND recipient_id = ? AND status = 'pending'")
+    .get(id, req.user.id);
+  if (!row) {
+    return res.status(404).json({ error: "not_found" });
+  }
+
+  db.prepare("DELETE FROM friend_requests WHERE id = ?").run(row.id);
+  res.status(204).end();
+});
+
+app.delete("/api/friends/requests/:id", (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    return res.status(404).json({ error: "not_found" });
+  }
+
+  const row = db
+    .prepare("SELECT * FROM friend_requests WHERE id = ? AND requester_id = ? AND status = 'pending'")
+    .get(id, req.user.id);
+  if (!row) {
+    return res.status(404).json({ error: "not_found" });
+  }
+
+  db.prepare("DELETE FROM friend_requests WHERE id = ?").run(row.id);
+  res.status(204).end();
+});
+
+app.get("/api/friends", (req, res) => {
+  const rows = db
+    .prepare(
+      `SELECT users.id, users.email, users.name, users.picture_url
+       FROM friend_requests
+       JOIN users ON users.id = CASE
+         WHEN friend_requests.requester_id = ? THEN friend_requests.recipient_id
+         ELSE friend_requests.requester_id
+       END
+       WHERE friend_requests.status = 'accepted'
+         AND (friend_requests.requester_id = ? OR friend_requests.recipient_id = ?)`,
+    )
+    .all(req.user.id, req.user.id, req.user.id);
+  res.json(rows.map(toFriendUserResponse));
+});
+
+app.delete("/api/friends/:userId", (req, res) => {
+  const row = db
+    .prepare(
+      `SELECT * FROM friend_requests
+       WHERE status = 'accepted'
+         AND ((requester_id = ? AND recipient_id = ?) OR (requester_id = ? AND recipient_id = ?))`,
+    )
+    .get(req.user.id, req.params.userId, req.params.userId, req.user.id);
+  if (!row) {
+    return res.status(404).json({ error: "not_found" });
+  }
+
+  db.prepare("DELETE FROM friend_requests WHERE id = ?").run(row.id);
+  res.status(204).end();
+});
+
+app.get("/api/friends/:userId/sightings", (req, res) => {
+  const friendship = db
+    .prepare(
+      `SELECT * FROM friend_requests
+       WHERE status = 'accepted'
+         AND ((requester_id = ? AND recipient_id = ?) OR (requester_id = ? AND recipient_id = ?))`,
+    )
+    .get(req.user.id, req.params.userId, req.params.userId, req.user.id);
+  if (!friendship) {
+    return res.status(404).json({ error: "not_friends" });
+  }
+
+  const rows = db
+    .prepare("SELECT * FROM sightings WHERE user_id = ? ORDER BY created_at DESC")
+    .all(req.params.userId);
+  res.json(rows.map(toSightingResponse));
+});
+
 app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError || err.message === "unsupported_file_type") {
     return res.status(400).json({ error: "invalid_photo" });

@@ -35,6 +35,17 @@ db.exec(`
   )
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS friend_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    requester_id TEXT NOT NULL,
+    recipient_id TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TEXT NOT NULL,
+    responded_at TEXT
+  )
+`);
+
 const sightingsColumns = db.prepare("PRAGMA table_info(sightings)").all();
 const hasUserId = sightingsColumns.some((col) => col.name === "user_id");
 if (!hasUserId) {
