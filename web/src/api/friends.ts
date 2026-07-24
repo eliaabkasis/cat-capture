@@ -1,4 +1,5 @@
-import type { FriendRequest, FriendUser, Sighting } from "../types";
+import type { FriendRequest, FriendUser } from "../types";
+import type { SightingsPage } from "./sightings";
 
 export class FriendRequestError extends Error {
   code: string;
@@ -88,10 +89,21 @@ export async function removeFriend(userId: string): Promise<void> {
   }
 }
 
-export async function fetchFriendSightings(userId: string): Promise<Sighting[]> {
-  const res = await fetch(`/api/friends/${userId}/sightings`, { credentials: "include" });
+export async function fetchFriendSightingsPage(userId: string, cursor?: string | null): Promise<SightingsPage> {
+  const params = new URLSearchParams({ limit: "30" });
+  if (cursor) params.set("cursor", cursor);
+
+  const res = await fetch(`/api/friends/${userId}/sightings?${params}`, { credentials: "include" });
   if (!res.ok) {
     throw new Error(`Failed to load friend's collection (${res.status})`);
+  }
+  return res.json();
+}
+
+export async function fetchFriendStreaks(): Promise<Record<string, number>> {
+  const res = await fetch("/api/friends/streaks", { credentials: "include" });
+  if (!res.ok) {
+    throw new Error(`Failed to load friend streaks (${res.status})`);
   }
   return res.json();
 }

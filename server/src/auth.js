@@ -39,7 +39,7 @@ export function upsertUser({ sub, email, name, picture }) {
        email = excluded.email,
        name = excluded.name,
        picture_url = excluded.picture_url`,
-  ).run(sub, email, name, picture, new Date().toISOString());
+  ).run(sub, email.toLowerCase(), name, picture, new Date().toISOString());
 
   return toUserResponse(
     db.prepare("SELECT * FROM users WHERE id = ?").get(sub),

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { FriendUser, Sighting } from "../types";
 import { fetchSightingsPage } from "../api/sightings";
-import { fetchFriendSightings } from "../api/friends";
+import { fetchFriendSightingsPage } from "../api/friends";
 import { isToday } from "../stats";
 import { SightingModal } from "../components/SightingModal";
 import styles from "./CollectionPage.module.css";
@@ -32,13 +32,7 @@ export function CollectionPage({ onBack, refreshKey, friend }: CollectionPagePro
     setHasMore(false);
     setLoadedIds(new Set());
 
-    const load = friend
-      ? fetchFriendSightings(friend.id).then((items) => ({
-          items,
-          nextCursor: null as string | null,
-          totalCount: items.length,
-        }))
-      : fetchSightingsPage();
+    const load = friend ? fetchFriendSightingsPage(friend.id) : fetchSightingsPage();
 
     load
       .then((page) => {
@@ -71,7 +65,8 @@ export function CollectionPage({ onBack, refreshKey, friend }: CollectionPagePro
   function loadMore() {
     if (loadingMore || !hasMore) return;
     setLoadingMore(true);
-    fetchSightingsPage(cursor)
+    const load = friend ? fetchFriendSightingsPage(friend.id, cursor) : fetchSightingsPage(cursor);
+    load
       .then((page) => {
         setSightings((prev) => [...prev, ...page.items]);
         setTotalCount(page.totalCount);

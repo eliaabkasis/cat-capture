@@ -6,13 +6,12 @@ import {
   cancelRequest,
   declineRequest,
   fetchFriends,
-  fetchFriendSightings,
+  fetchFriendStreaks,
   fetchIncomingRequests,
   fetchOutgoingRequests,
   removeFriend,
   sendFriendRequest,
 } from "../api/friends";
-import { computeDailyStreak } from "../stats";
 import styles from "./FriendsPage.module.css";
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -41,17 +40,11 @@ export function FriendsPage({ onBack, onOpenFriend }: FriendsPageProps) {
 
   useEffect(() => {
     fetchFriends()
-      .then((loadedFriends) => {
-        setFriends(loadedFriends);
-        loadedFriends.forEach((friend) => {
-          fetchFriendSightings(friend.id)
-            .then((sightings) => {
-              setStreaks((prev) => ({ ...prev, [friend.id]: computeDailyStreak(sightings) }));
-            })
-            .catch(() => {});
-        });
-      })
+      .then(setFriends)
       .catch(() => setFriends([]));
+    fetchFriendStreaks()
+      .then(setStreaks)
+      .catch(() => setStreaks({}));
     fetchIncomingRequests()
       .then(setIncoming)
       .catch(() => setIncoming([]));

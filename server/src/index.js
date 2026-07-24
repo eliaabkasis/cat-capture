@@ -21,6 +21,7 @@ import {
   deleteSession,
 } from "./auth.js";
 import { requireAuth } from "./middleware/requireAuth.js";
+import { computeDailyStreak } from "./stats.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dataDir = process.env.DATA_DIR || path.join(__dirname, "..");
@@ -126,18 +127,7 @@ app.get("/api/me", requireAuth, (req, res) => {
   res.json(req.user);
 });
 
-app.use("/api/sightings", requireAuth);
-
-app.get("/api/sightings", (req, res) => {
-  const { limit, cursor } = req.query;
-
-  if (!limit) {
-    const rows = db
-      .prepare("SELECT * FROM sightings WHERE user_id = ? ORDER BY created_at DESC, id DESC")
-      .all(req.user.id);
-    return res.json(rows.map(toSightingResponse));
-  }
-
+function paginateSightings(userId, { limit, cursor }) {
   const pageSize = Math.min(Math.max(parseInt(limit, 10) || 30, 1), 60);
 
   let rows;
@@ -150,13 +140,13 @@ app.get("/api/sightings", (req, res) => {
          ORDER BY created_at DESC, id DESC
          LIMIT ?`,
       )
-      .all(req.user.id, cursorCreatedAt, cursorCreatedAt, cursorId, pageSize + 1);
+      .all(userId, cursorCreatedAt, cursorCreatedAt, cursorId, pageSize + 1);
   } else {
     rows = db
       .prepare(
         `SELECT * FROM sightings WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT ?`,
       )
-      .all(req.user.id, pageSize + 1);
+      .all(userId, pageSize + 1);
   }
 
   const hasMore = rows.length > pageSize;
@@ -165,9 +155,24 @@ app.get("/api/sightings", (req, res) => {
   const nextCursor = hasMore && last ? `${last.created_at}|${last.id}` : null;
   const totalCount = db
     .prepare("SELECT COUNT(*) AS count FROM sightings WHERE user_id = ?")
-    .get(req.user.id).count;
+    .get(userId).count;
 
-  res.json({ items: pageRows.map(toSightingResponse), nextCursor, totalCount });
+  return { items: pageRows.map(toSightingResponse), nextCursor, totalCount };
+}
+
+app.use("/api/sightings", requireAuth);
+
+app.get("/api/sightings", (req, res) => {
+  const { limit, cursor } = req.query;
+
+  if (!limit) {
+    const rows = db
+      .prepare("SELECT * FROM sightings WHERE user_id = ? ORDER BY created_at DESC, id DESC")
+      .all(req.user.id);
+    return res.json(rows.map(toSightingResponse));
+  }
+
+  res.json(paginateSightings(req.user.id, { limit, cursor }));
 });
 
 app.post("/api/sightings", sightingCreateLimiter, upload.single("photo"), async (req, res) => {
@@ -282,7 +287,7 @@ app.post("/api/friends/requests", (req, res) => {
     return res.status(400).json({ error: "missing_email" });
   }
 
-  const target = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
+  const target = db.prepare("SELECT * FROM users WHERE email = ?").get(email.trim().toLowerCase());
   if (!target) {
     return res.status(404).json({ error: "user_not_found" });
   }
@@ -418,6 +423,36 @@ app.get("/api/friends", (req, res) => {
   res.json(rows.map(toFriendUserResponse));
 });
 
+app.get("/api/friends/streaks", (req, res) => {
+  const rows = db
+    .prepare(
+      `SELECT sightings.user_id AS friend_id, sightings.created_at AS created_at
+       FROM friend_requests
+       JOIN sightings ON sightings.user_id = CASE
+         WHEN friend_requests.requester_id = ? THEN friend_requests.recipient_id
+         ELSE friend_requests.requester_id
+       END
+       WHERE friend_requests.status = 'accepted'
+         AND (friend_requests.requester_id = ? OR friend_requests.recipient_id = ?)`,
+    )
+    .all(req.user.id, req.user.id, req.user.id);
+
+  const createdAtByFriend = new Map();
+  for (const row of rows) {
+    if (!createdAtByFriend.has(row.friend_id)) {
+      createdAtByFriend.set(row.friend_id, []);
+    }
+    createdAtByFriend.get(row.friend_id).push(row.created_at);
+  }
+
+  const streaks = {};
+  for (const [friendId, createdAtList] of createdAtByFriend) {
+    streaks[friendId] = computeDailyStreak(createdAtList);
+  }
+
+  res.json(streaks);
+});
+
 app.delete("/api/friends/:userId", (req, res) => {
   const row = db
     .prepare(
@@ -446,10 +481,8 @@ app.get("/api/friends/:userId/sightings", (req, res) => {
     return res.status(404).json({ error: "not_friends" });
   }
 
-  const rows = db
-    .prepare("SELECT * FROM sightings WHERE user_id = ? ORDER BY created_at DESC")
-    .all(req.params.userId);
-  res.json(rows.map(toSightingResponse));
+  const { limit, cursor } = req.query;
+  res.json(paginateSightings(req.params.userId, { limit: limit || "30", cursor }));
 });
 
 app.use((err, req, res, next) => {

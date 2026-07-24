@@ -56,3 +56,10 @@ const hasThumbFilename = sightingsColumns.some((col) => col.name === "thumb_file
 if (!hasThumbFilename) {
   db.exec("ALTER TABLE sightings ADD COLUMN thumb_filename TEXT");
 }
+
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_sightings_user_id ON sightings(user_id);
+  CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+  CREATE INDEX IF NOT EXISTS idx_friend_requests_requester ON friend_requests(requester_id);
+  CREATE INDEX IF NOT EXISTS idx_friend_requests_recipient ON friend_requests(recipient_id);
+`);
