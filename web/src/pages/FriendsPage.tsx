@@ -6,11 +6,13 @@ import {
   cancelRequest,
   declineRequest,
   fetchFriends,
+  fetchFriendSightings,
   fetchIncomingRequests,
   fetchOutgoingRequests,
   removeFriend,
   sendFriendRequest,
 } from "../api/friends";
+import { computeDailyStreak } from "../stats";
 import styles from "./FriendsPage.module.css";
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -28,6 +30,7 @@ interface FriendsPageProps {
 
 export function FriendsPage({ onBack, onOpenFriend }: FriendsPageProps) {
   const [friends, setFriends] = useState<FriendUser[]>([]);
+  const [streaks, setStreaks] = useState<Record<string, number>>({});
   const [incoming, setIncoming] = useState<FriendRequest[]>([]);
   const [outgoing, setOutgoing] = useState<FriendRequest[]>([]);
   const [email, setEmail] = useState("");
@@ -38,7 +41,16 @@ export function FriendsPage({ onBack, onOpenFriend }: FriendsPageProps) {
 
   useEffect(() => {
     fetchFriends()
-      .then(setFriends)
+      .then((loadedFriends) => {
+        setFriends(loadedFriends);
+        loadedFriends.forEach((friend) => {
+          fetchFriendSightings(friend.id)
+            .then((sightings) => {
+              setStreaks((prev) => ({ ...prev, [friend.id]: computeDailyStreak(sightings) }));
+            })
+            .catch(() => {});
+        });
+      })
       .catch(() => setFriends([]));
     fetchIncomingRequests()
       .then(setIncoming)
@@ -167,6 +179,7 @@ export function FriendsPage({ onBack, onOpenFriend }: FriendsPageProps) {
                   <img className={styles.avatar} src={friend.pictureUrl} alt="" referrerPolicy="no-referrer" />
                 )}
                 <span className={styles.rowName}>{friend.name ?? friend.email}</span>
+                <span className={styles.streak}>{streaks[friend.id] ?? 0} day streak</span>
               </button>
               <div className={styles.rowActions}>
                 {confirmingRemove === friend.id ? (

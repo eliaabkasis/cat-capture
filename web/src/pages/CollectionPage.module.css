@@ -69,6 +69,7 @@
 }
 
 .tile {
+  position: relative;
   border: 3px solid var(--color-primary);
   padding: 6px;
   background: var(--color-surface);
@@ -77,6 +78,116 @@
   box-shadow: 0 10px 20px var(--color-shadow);
   cursor: pointer;
   aspect-ratio: 1 / 1;
+}
+
+.todayBadge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  background: linear-gradient(135deg, #ffe08a, #f0b429);
+  color: #5a3a00;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.7rem;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 10px rgba(154, 105, 0, 0.4);
+}
+
+.tileToday {
+  border-color: #f0b429;
+  animation: today-glow 1.5s ease-in-out infinite;
+}
+
+.tileToday::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background-size: 250% 250%;
+  background-position: 200% 200%;
+  animation: shine-sweep 2.5s ease-out 1 forwards;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+}
+
+.skeletonTile {
+  border-radius: var(--radius-md);
+  aspect-ratio: 1 / 1;
+  background: linear-gradient(100deg, var(--color-bg-soft) 30%, var(--color-surface) 50%, var(--color-bg-soft) 70%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.3s ease-in-out infinite;
+}
+
+.sparkle {
+  position: absolute;
+  z-index: 2;
+  color: #ffd76a;
+  font-size: 0.9rem;
+  text-shadow: 0 0 6px rgba(255, 215, 106, 0.9);
+  animation: sparkle-twinkle 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.sparkle[data-pos="tl"] {
+  top: 6px;
+  left: 6px;
+}
+
+.sparkle[data-pos="br"] {
+  bottom: 6px;
+  right: 6px;
+  animation-delay: 0.9s;
+}
+
+@keyframes today-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px rgba(240, 180, 41, 0.35),
+      0 0 10px 2px rgba(255, 196, 61, 0.45);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px rgba(240, 180, 41, 0.6),
+      0 0 22px 6px rgba(255, 196, 61, 0.85);
+  }
+}
+
+@keyframes shine-sweep {
+  0% {
+    background-position: 200% 200%;
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    background-position: -50% -50%;
+    opacity: 0;
+  }
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes sparkle-twinkle {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.7) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15) rotate(20deg);
+  }
 }
 
 .tileImage {

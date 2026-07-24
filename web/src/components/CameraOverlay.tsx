@@ -15,6 +15,13 @@ export function CameraOverlay({ onClose, onCaptured }: CameraOverlayProps) {
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [phase, setPhase] = useState<Phase>("live");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
 
   useEffect(() => {
     let cancelled = false;
@@ -67,23 +74,36 @@ export function CameraOverlay({ onClose, onCaptured }: CameraOverlayProps) {
     );
     if (!blob) return;
 
+    setPreviewUrl(URL.createObjectURL(blob));
     processBlob(blob);
   }
 
   function handleFileChosen(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
-    if (file) processBlob(file);
+    if (!file) return;
+
+    setPreviewUrl(URL.createObjectURL(file));
+    processBlob(file);
   }
 
   function retry() {
+    setPreviewUrl(null);
     setPhase("live");
   }
 
   return (
     <div className={styles.overlay}>
       <div className={styles.videoWrap}>
-        <video ref={videoRef} className={styles.video} autoPlay playsInline muted />
+        <video
+          ref={videoRef}
+          className={previewUrl ? `${styles.video} ${styles.videoHidden}` : styles.video}
+          autoPlay
+          playsInline
+          muted
+        />
+
+        {previewUrl && <img className={styles.video} src={previewUrl} alt="Captured cat" />}
 
         <button className={styles.closeButton} onClick={onClose} aria-label="Close camera">
           ×
