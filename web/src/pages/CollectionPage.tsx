@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FriendUser, Sighting } from "../types";
-import { fetchSightings } from "../api/sightings";
+import { fetchSightingsPage } from "../api/sightings";
 import { fetchFriendSightings } from "../api/friends";
 import { isToday } from "../stats";
 import { SightingModal } from "../components/SightingModal";
@@ -21,16 +21,34 @@ export function CollectionPage({ onBack, refreshKey, friend }: CollectionPagePro
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadedIds, setLoadedIds] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<Sighting | null>(null);
-  const [loading, setLoading] = useState(true);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
   const readOnly = Boolean(friend);
 
   useEffect(() => {
-    setLoading(true);
-    const load = friend ? fetchFriendSightings(friend.id) : fetchSightings();
+    setInitialLoading(true);
+    setSightings([]);
+    setCursor(null);
+    setHasMore(false);
+    setLoadedIds(new Set());
+
+    const load = friend
+      ? fetchFriendSightings(friend.id).then((items) => ({
+          items,
+          nextCursor: null as string | null,
+          totalCount: items.length,
+        }))
+      : fetchSightingsPage();
+
     load
-      .then(setSightings)
+      .then((page) => {
+        setSightings(page.items);
+        setTotalCount(page.totalCount);
+        setCursor(page.nextCursor);
+        setHasMore(page.nextCursor !== null);
+      })
       .catch(() => setSightings([]))
-      .finally(() => setLoading(false));
+      .finally(() => setInitialLoading(false));
   }, [refreshKey, friend]);
 
   useEffect(() => {
@@ -87,13 +105,11 @@ export function CollectionPage({ onBack, refreshKey, friend }: CollectionPagePro
         </button>
         <h1 className={styles.title}>
           {friend ? `${friend.name ?? friend.email}'s Cats` : "My Cats"}
-          {sightings.length > 0 && (
-            <span className={styles.count}>{sightings.length} Captured</span>
-          )}
+          {totalCount > 0 && <span className={styles.count}>{totalCount} Captured</span>}
         </h1>
       </div>
 
-      {loading ? (
+      {initialLoading ? (
         <div className={styles.grid}>
           {Array.from({ length: 6 }).map((_, i) => (
             <div className={styles.skeletonTile} key={i} />
@@ -104,13 +120,20 @@ export function CollectionPage({ onBack, refreshKey, friend }: CollectionPagePro
           {friend ? "No cats captured yet." : "No cats captured yet — go find one!"}
         </p>
       ) : (
-        <div className={styles.grid}>
+        <div className={styles.grid} ref={gridRef}>
           {sightings.map((sighting) => {
             const caughtToday = isToday(sighting.createdAt);
+            const loaded = loadedIds.has(sighting.id);
             return (
               <button
                 key={sighting.id}
-                className={caughtToday ? `${styles.tile} ${styles.tileToday}` : styles.tile}
+                className={[
+                  styles.tile,
+                  caughtToday && styles.tileToday,
+                  loaded && styles.tileLoaded,
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
                 onClick={() => setSelected(sighting)}
                 aria-label="View original photo"
               >
@@ -121,10 +144,17 @@ export function CollectionPage({ onBack, refreshKey, friend }: CollectionPagePro
                     <span className={styles.todayBadge}>Today</span>
                   </>
                 )}
-                <img className={styles.tileImage} src={sighting.lofiUrl} alt="Lofi cat portrait" />
+                <img
+                  className={loaded ? `${styles.tileImage} ${styles.tileImageLoaded}` : styles.tileImage}
+                  src={sighting.thumbUrl}
+                  alt="Lofi cat portrait"
+                  loading="lazy"
+                  onLoad={() => handleImageLoad(sighting.id)}
+                />
               </button>
             );
           })}
+          {hasMore && <div ref={sentinelRef} className={styles.sentinel} />}
         </div>
       )}
 
