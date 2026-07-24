@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Sighting } from "../types";
 import { NoCatFoundError, submitSighting } from "../api/sightings";
+import { resizeForUpload } from "../image";
 import styles from "./CameraOverlay.module.css";
 
 interface CameraOverlayProps {
@@ -8,7 +9,7 @@ interface CameraOverlayProps {
   onCaptured: (sighting: Sighting) => void;
 }
 
-type Phase = "live" | "checking" | "no-cat" | "error";
+type Phase = "live" | "checking" | "no-cat" | "error" | "no-camera";
 
 export function CameraOverlay({ onClose, onCaptured }: CameraOverlayProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -26,6 +27,12 @@ export function CameraOverlay({ onClose, onCaptured }: CameraOverlayProps) {
   useEffect(() => {
     let cancelled = false;
 
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setPhase("no-camera");
+      setCameraError("Camera isn't available in this browser.");
+      return;
+    }
+
     navigator.mediaDevices
       .getUserMedia({ video: { facingMode: "environment" }, audio: false })
       .then((stream) => {
@@ -37,21 +44,33 @@ export function CameraOverlay({ onClose, onCaptured }: CameraOverlayProps) {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
+        setPhase("live");
       })
-      .catch(() => {
-        if (!cancelled) setPhase("error");
+      .catch((err) => {
+        if (cancelled) return;
+        setPhase("no-camera");
+        if (err?.name === "NotAllowedError") {
+          setCameraError("Camera permission denied. Allow camera access in your browser settings.");
+        } else if (err?.name === "NotFoundError" || err?.name === "OverconstrainedError") {
+          setCameraError("No camera found on this device.");
+        } else if (err?.name === "NotReadableError") {
+          setCameraError("Camera is already in use by another app.");
+        } else {
+          setCameraError("Couldn't access the camera.");
+        }
       });
 
     return () => {
       cancelled = true;
       streamRef.current?.getTracks().forEach((track) => track.stop());
     };
-  }, []);
+  }, [cameraAttempt]);
 
   async function processBlob(blob: Blob) {
     setPhase("checking");
     try {
-      const sighting = await submitSighting(blob);
+      const resized = await resizeForUpload(blob);
+      const sighting = await submitSighting(resized);
       onCaptured(sighting);
     } catch (err) {
       setPhase(err instanceof NoCatFoundError ? "no-cat" : "error");
@@ -90,6 +109,12 @@ export function CameraOverlay({ onClose, onCaptured }: CameraOverlayProps) {
   function retry() {
     setPreviewUrl(null);
     setPhase("live");
+  }
+
+  function retryCamera() {
+    setCameraError(null);
+    setPhase("live");
+    setCameraAttempt((n) => n + 1);
   }
 
   return (
@@ -150,6 +175,21 @@ export function CameraOverlay({ onClose, onCaptured }: CameraOverlayProps) {
             <p className={styles.errorText}>Something went wrong. Check your connection and try again.</p>
             <button className={styles.retryButton} onClick={retry}>
               Retry
+            </button>
+            <button className={styles.uploadButton} onClick={() => fileInputRef.current?.click()}>
+              Upload from file
+            </button>
+          </div>
+        )}
+
+        {phase === "no-camera" && (
+          <div className={styles.statusPanel}>
+            <p className={styles.errorText}>{cameraError}</p>
+            <button className={styles.retryButton} onClick={retryCamera}>
+              Retry
+            </button>
+            <button className={styles.uploadButton} onClick={() => fileInputRef.current?.click()}>
+              Upload from file
             </button>
           </div>
         )}

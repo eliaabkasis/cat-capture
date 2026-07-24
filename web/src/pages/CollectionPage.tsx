@@ -14,6 +14,12 @@ interface CollectionPageProps {
 
 export function CollectionPage({ onBack, refreshKey, friend }: CollectionPageProps) {
   const [sightings, setSightings] = useState<Sighting[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadedIds, setLoadedIds] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<Sighting | null>(null);
   const [loading, setLoading] = useState(true);
   const readOnly = Boolean(friend);
@@ -27,8 +33,49 @@ export function CollectionPage({ onBack, refreshKey, friend }: CollectionPagePro
       .finally(() => setLoading(false));
   }, [refreshKey, friend]);
 
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMore();
+        }
+      },
+      { root: gridRef.current, rootMargin: "200px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasMore, cursor, loadingMore]);
+
+  function loadMore() {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    fetchSightingsPage(cursor)
+      .then((page) => {
+        setSightings((prev) => [...prev, ...page.items]);
+        setTotalCount(page.totalCount);
+        setCursor(page.nextCursor);
+        setHasMore(page.nextCursor !== null);
+      })
+      .catch(() => setHasMore(false))
+      .finally(() => setLoadingMore(false));
+  }
+
+  function handleImageLoad(id: string) {
+    setLoadedIds((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }
+
   function handleDeleted(id: string) {
     setSightings((prev) => prev.filter((sighting) => sighting.id !== id));
+    setTotalCount((prev) => Math.max(0, prev - 1));
     setSelected(null);
   }
 

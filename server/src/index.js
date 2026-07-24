@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import multer from "multer";
+import sharp from "sharp";
 import { rateLimit, ipKeyGenerator } from "express-rate-limit";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -69,11 +70,15 @@ app.use(cookieParser());
 app.use(
   "/uploads",
   express.static(uploadsDir, {
+    immutable: true,
+    maxAge: "1y",
     setHeaders: (res) => {
       res.setHeader("X-Content-Type-Options", "nosniff");
     },
   }),
 );
+
+const THUMBNAIL_SIZE = 320;
 
 function toSightingResponse(row) {
   return {
@@ -81,6 +86,7 @@ function toSightingResponse(row) {
     createdAt: row.created_at,
     originalUrl: `/uploads/${row.original_filename}`,
     lofiUrl: `/uploads/${row.lofi_filename}`,
+    thumbUrl: `/uploads/${row.thumb_filename || row.lofi_filename}`,
   };
 }
 
@@ -123,10 +129,45 @@ app.get("/api/me", requireAuth, (req, res) => {
 app.use("/api/sightings", requireAuth);
 
 app.get("/api/sightings", (req, res) => {
-  const rows = db
-    .prepare("SELECT * FROM sightings WHERE user_id = ? ORDER BY created_at DESC")
-    .all(req.user.id);
-  res.json(rows.map(toSightingResponse));
+  const { limit, cursor } = req.query;
+
+  if (!limit) {
+    const rows = db
+      .prepare("SELECT * FROM sightings WHERE user_id = ? ORDER BY created_at DESC, id DESC")
+      .all(req.user.id);
+    return res.json(rows.map(toSightingResponse));
+  }
+
+  const pageSize = Math.min(Math.max(parseInt(limit, 10) || 30, 1), 60);
+
+  let rows;
+  if (cursor && String(cursor).includes("|")) {
+    const [cursorCreatedAt, cursorId] = String(cursor).split("|");
+    rows = db
+      .prepare(
+        `SELECT * FROM sightings
+         WHERE user_id = ? AND (created_at < ? OR (created_at = ? AND id < ?))
+         ORDER BY created_at DESC, id DESC
+         LIMIT ?`,
+      )
+      .all(req.user.id, cursorCreatedAt, cursorCreatedAt, cursorId, pageSize + 1);
+  } else {
+    rows = db
+      .prepare(
+        `SELECT * FROM sightings WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT ?`,
+      )
+      .all(req.user.id, pageSize + 1);
+  }
+
+  const hasMore = rows.length > pageSize;
+  const pageRows = hasMore ? rows.slice(0, pageSize) : rows;
+  const last = pageRows[pageRows.length - 1];
+  const nextCursor = hasMore && last ? `${last.created_at}|${last.id}` : null;
+  const totalCount = db
+    .prepare("SELECT COUNT(*) AS count FROM sightings WHERE user_id = ?")
+    .get(req.user.id).count;
+
+  res.json({ items: pageRows.map(toSightingResponse), nextCursor, totalCount });
 });
 
 app.post("/api/sightings", sightingCreateLimiter, upload.single("photo"), async (req, res) => {
@@ -150,6 +191,12 @@ app.post("/api/sightings", sightingCreateLimiter, upload.single("photo"), async 
     const lofiExt = EXT_BY_MIME[result.imageMimeType] || "png";
     const originalFilename = `${id}-original.${originalExt}`;
     const lofiFilename = `${id}-lofi.${lofiExt}`;
+    const thumbFilename = `${id}-thumb.webp`;
+
+    const thumbBuffer = await sharp(result.imageBuffer)
+      .resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, { fit: "cover" })
+      .webp({ quality: 78 })
+      .toBuffer();
 
     await writeFile(
       path.join(uploadsDir, originalFilename),
@@ -159,12 +206,16 @@ app.post("/api/sightings", sightingCreateLimiter, upload.single("photo"), async 
       path.join(uploadsDir, lofiFilename),
       result.imageBuffer,
     );
+    await writeFile(
+      path.join(uploadsDir, thumbFilename),
+      thumbBuffer,
+    );
 
     const createdAt = new Date().toISOString();
     db.prepare(
-      `INSERT INTO sightings (id, created_at, original_filename, lofi_filename, user_id)
-       VALUES (?, ?, ?, ?, ?)`,
-    ).run(id, createdAt, originalFilename, lofiFilename, req.user.id);
+      `INSERT INTO sightings (id, created_at, original_filename, lofi_filename, thumb_filename, user_id)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run(id, createdAt, originalFilename, lofiFilename, thumbFilename, req.user.id);
 
     res.status(201).json(
       toSightingResponse({
@@ -172,6 +223,7 @@ app.post("/api/sightings", sightingCreateLimiter, upload.single("photo"), async 
         created_at: createdAt,
         original_filename: originalFilename,
         lofi_filename: lofiFilename,
+        thumb_filename: thumbFilename,
       }),
     );
   } catch (err) {
@@ -192,9 +244,9 @@ app.delete("/api/sightings/:id", async (req, res) => {
   db.prepare("DELETE FROM sightings WHERE id = ?").run(req.params.id);
 
   await Promise.all(
-    [row.original_filename, row.lofi_filename].map((filename) =>
-      unlink(path.join(uploadsDir, filename)).catch(() => {}),
-    ),
+    [row.original_filename, row.lofi_filename, row.thumb_filename]
+      .filter(Boolean)
+      .map((filename) => unlink(path.join(uploadsDir, filename)).catch(() => {})),
   );
 
   res.status(204).end();

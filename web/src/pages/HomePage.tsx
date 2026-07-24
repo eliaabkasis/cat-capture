@@ -23,8 +23,10 @@ export function HomePage({
 }: HomePageProps) {
   const [count, setCount] = useState<number | null>(null);
   const [streak, setStreak] = useState(0);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
+    setStatsLoading(true);
     fetchSightings()
       .then((sightings) => {
         setCount(sightings.length);
@@ -33,7 +35,8 @@ export function HomePage({
       .catch(() => {
         setCount(null);
         setStreak(0);
-      });
+      })
+      .finally(() => setStatsLoading(false));
   }, [refreshKey]);
 
   return (
@@ -51,11 +54,16 @@ export function HomePage({
       <div className={styles.header}>
         <h1 className={styles.title}>Cat Capture</h1>
         <p className={styles.subtitle}>Snap the cats you meet in the wild</p>
-        {count !== null && count > 0 && (
-          <p className={styles.stats}>
-            {count} {count === 1 ? "cat" : "cats"} captured
-            {streak > 0 && ` — ${streak} day streak`}
-          </p>
+        {statsLoading ? (
+          <p className={`${styles.stats} ${styles.statsSkeleton}`}>&nbsp;</p>
+        ) : (
+          count !== null &&
+          count > 0 && (
+            <p className={styles.stats}>
+              {count} {count === 1 ? "cat" : "cats"} captured
+              {streak > 0 && ` — ${streak} day streak`}
+            </p>
+          )
         )}
       </div>
 
